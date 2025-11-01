@@ -348,6 +348,58 @@ export const useImagesStore = defineStore('images', () => {
     }
   }
 
+  /**
+   * 从 URL 加载图片（用于恢复项目）
+   */
+  async function loadImageFromURL(
+    url: string,
+    imageData?: Partial<EditorImage>
+  ): Promise<EditorImage> {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous' // 允许跨域
+      img.onload = () => {
+        const newImage: EditorImage = {
+          id: imageData?.id || generateUUID(),
+          name: imageData?.name || `图片 ${nextId.value++}`,
+          src: url,
+          imageElement: img,
+          position: imageData?.position || { x: 50, y: 50 },
+          scale: imageData?.scale || { x: 1, y: 1 },
+          rotation: imageData?.rotation || 0,
+          zIndex: imageData?.zIndex || getNextZIndex.value,
+          isLocked: imageData?.isLocked || false,
+          isVisible: imageData?.isVisible !== false,
+          isSelected: false,
+          metadata: {
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+            fileSize: 0,
+            mimeType: 'image/unknown',
+            lastModified: Date.now(),
+          },
+          createdAt: imageData?.createdAt || getCurrentISOTime(),
+          modifiedAt: getCurrentISOTime(),
+        }
+
+        images.value.push(newImage)
+        canvasStore.markAsModified()
+        resolve(newImage)
+      }
+      img.onerror = () => {
+        reject(new Error(`Failed to load image from URL: ${url}`))
+      }
+      img.src = url
+    })
+  }
+
+  /**
+   * 清空所有图片（别名，用于项目加载）
+   */
+  function clearAllImages(): void {
+    deleteAllImages()
+  }
+
   // 重置
   function resetImages() {
     deleteAllImages()
@@ -372,6 +424,8 @@ export const useImagesStore = defineStore('images', () => {
     // Actions
     loadImageFromFile,
     loadImagesFromFiles,
+    loadImageFromURL,
+    clearAllImages,
     updateImage,
     updateImagePosition,
     updateImageRotation,

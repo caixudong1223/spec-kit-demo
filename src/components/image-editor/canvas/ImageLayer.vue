@@ -3,7 +3,7 @@ import { useAnnotationsStore } from '@/stores/image-editor/annotations'
 import { useCanvasStore } from '@/stores/image-editor/canvas'
 import { useImagesStore } from '@/stores/image-editor/images'
 import type { EditorImage } from '@/types/image-editor'
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
 import AnnotationLayer from './AnnotationLayer.vue'
 
 const imagesStore = useImagesStore()
@@ -13,7 +13,8 @@ const annotationsStore = useAnnotationsStore()
 // 标注层组件引用
 const annotationLayerRef = ref<InstanceType<typeof AnnotationLayer> | null>(null)
 
-// Konva Stage 引用
+// Konva Stage 引用（直接使用 ref）
+const konvaStageRef = ref<any>(null)
 const stageRef = ref<any>(null)
 
 // 计算可见图片（按 zIndex 排序）
@@ -358,9 +359,33 @@ const emit = defineEmits<{
   transformerNeedsUpdate: []
 }>()
 
-// 舞台准备就绪
+// 舞台准备就绪（从 ref 获取）
+onMounted(async () => {
+  await nextTick()
+  // 延迟一下，确保 Konva Stage 完全初始化
+  setTimeout(() => {
+    // 从 ref 获取 Konva Stage 实例
+    if (konvaStageRef.value && konvaStageRef.value.getStage) {
+      const stage = konvaStageRef.value.getStage()
+      console.log('🖼️ ImageLayer: Stage obtained from ref', stage)
+      stageRef.value = stage
+      console.log('🖼️ ImageLayer: Emitting stageReady to EditorCanvas')
+      emit('stageReady', stage)
+    } else {
+      console.error('❌ ImageLayer: Failed to get stage from ref', konvaStageRef.value)
+    }
+  }, 100)
+})
+
+// 舞台准备就绪（备用方法，从 @ready 事件）
 function handleStageReady(stage: any) {
+  console.log('🖼️ ImageLayer: Stage ready from v-stage @ready event', stage)
+  if (stageRef.value) {
+    console.log('🖼️ ImageLayer: Stage already set, skipping')
+    return
+  }
   stageRef.value = stage
+  console.log('🖼️ ImageLayer: Emitting stageReady to EditorCanvas')
   emit('stageReady', stage)
 }
 </script>
@@ -369,6 +394,7 @@ function handleStageReady(stage: any) {
   <div class="image-layer">
     <!-- vue-konva Stage 固定大小 -->
     <v-stage
+      ref="konvaStageRef"
       :config="stageConfig"
       @mousedown="handleStageMouseDown"
       @mousemove="handleStageMouseMove"

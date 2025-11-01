@@ -44,13 +44,23 @@ const containerStyle = computed(() => {
   return { cursor }
 })
 
+// Emit 事件定义
+const emit = defineEmits<{
+  stageReady: [stage: any]
+}>()
+
 // 处理舞台准备就绪
 function handleStageReady(stage: any) {
+  console.log('🎨 EditorCanvas: Stage ready received from ImageLayer', stage)
   stageRef.value = stage
   const layers = stage.getLayers()
   if (layers.length > 0) {
     layerRef.value = layers[0]
   }
+
+  // 向父组件发出事件
+  console.log('🎨 EditorCanvas: Emitting stageReady to parent')
+  emit('stageReady', stage)
 }
 
 // 处理 Transformer 需要更新

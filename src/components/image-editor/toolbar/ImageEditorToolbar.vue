@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import { useCanvasStore } from '@/stores/image-editor/canvas'
 import { useImagesStore } from '@/stores/image-editor/images'
 import { useImageLoader } from '@/composables/image-editor/useImageLoader'
+import { useCanvasExport } from '@/composables/image-editor/useCanvasExport'
+import { useProjectFile } from '@/composables/image-editor/useProjectFile'
 import {
   ZoomIn,
   ZoomOut,
@@ -14,14 +16,27 @@ import {
   Edit,
   Upload,
   FolderOpened,
+  Download,
+  Document,
+  FolderAdd,
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+
+// Props
+interface Props {
+  stage?: any
+}
+
+const props = defineProps<Props>()
 
 const canvasStore = useCanvasStore()
 const imagesStore = useImagesStore()
 const imageLoader = useImageLoader()
+const canvasExport = useCanvasExport()
+const projectFile = useProjectFile()
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const projectInputRef = ref<HTMLInputElement | null>(null)
 
 // 工具按钮配置
 const tools = [
@@ -97,6 +112,54 @@ async function handleFileChange(event: Event) {
   target.value = ''
 }
 
+// ========== 导出功能 ==========
+
+// 导出为 PNG
+async function handleExportPNG() {
+  console.log('🚀 Toolbar: Export PNG clicked, stage =', props.stage)
+  if (!props.stage) {
+    console.error('❌ Toolbar: Stage is null/undefined!')
+    ElMessage.error('画布未初始化')
+    return
+  }
+  await canvasExport.exportAsPNG(props.stage)
+}
+
+// 导出为 JPEG
+async function handleExportJPEG() {
+  if (!props.stage) {
+    ElMessage.error('画布未初始化')
+    return
+  }
+  await canvasExport.exportAsJPEG(props.stage)
+}
+
+// ========== 项目文件管理 ==========
+
+// 保存项目
+async function handleSaveProject() {
+  await projectFile.saveProjectFile()
+}
+
+// 选择项目文件
+function handleSelectProjectFile() {
+  projectInputRef.value?.click()
+}
+
+// 加载项目文件
+async function handleLoadProjectFile(event: Event) {
+  const target = event.target as HTMLInputElement
+  const files = target.files
+
+  if (!files || files.length === 0) return
+
+  const file = files[0]
+  await projectFile.loadProjectFile(file)
+
+  // 重置 input
+  target.value = ''
+}
+
 // 缩放显示文本
 const zoomText = computed(() => `${(canvasStore.view.scale * 100).toFixed(0)}%`)
 
@@ -131,6 +194,53 @@ const canLoadImages = computed(() => imagesStore.canAddMoreImages)
         style="display: none"
         @change="handleFileChange"
       >
+    </div>
+
+    <el-divider direction="vertical" />
+
+    <!-- 项目管理 -->
+    <div class="toolbar-section">
+      <el-button
+        :icon="Document"
+        @click="handleSaveProject"
+      >
+        保存项目
+      </el-button>
+
+      <el-button
+        :icon="FolderAdd"
+        @click="handleSelectProjectFile"
+      >
+        加载项目
+      </el-button>
+
+      <!-- 隐藏的项目文件输入 -->
+      <input
+        ref="projectInputRef"
+        type="file"
+        accept="application/json"
+        style="display: none"
+        @change="handleLoadProjectFile"
+      >
+    </div>
+
+    <el-divider direction="vertical" />
+
+    <!-- 导出 -->
+    <div class="toolbar-section">
+      <el-button
+        :icon="Download"
+        @click="handleExportPNG"
+      >
+        导出PNG
+      </el-button>
+
+      <el-button
+        :icon="Download"
+        @click="handleExportJPEG"
+      >
+        导出JPEG
+      </el-button>
     </div>
 
     <el-divider direction="vertical" />

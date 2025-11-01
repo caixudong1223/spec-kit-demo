@@ -30,12 +30,20 @@ const emit = defineEmits<Emits>()
 const canvasStore = useCanvasStore()
 const canvasWrapperRef = ref<HTMLDivElement | null>(null)
 const activeTab = ref('images')
+const stageRef = ref<any>(null)
 
 // 注册键盘快捷键
 useKeyboardShortcuts()
 
 // 自适应画布尺寸
 const { isReady } = useCanvasResize(canvasWrapperRef)
+
+// 处理舞台就绪
+function handleStageReady(stage: any) {
+  console.log('🎯 ImageEditorContainer: Stage ready received', stage)
+  stageRef.value = stage
+  console.log('🎯 ImageEditorContainer: stageRef set to', stageRef.value)
+}
 
 // 初始化画布
 onMounted(() => {
@@ -61,7 +69,7 @@ canvasStore.$subscribe((mutation, state) => {
 <template>
   <div class="image-editor-container">
     <!-- 主工具栏 -->
-    <ImageEditorToolbar />
+    <ImageEditorToolbar :stage="stageRef" />
 
     <!-- 图片工具栏 -->
     <ImageTools />
@@ -72,9 +80,9 @@ canvasStore.$subscribe((mutation, state) => {
     <!-- 主工作区 -->
     <div class="main-content">
       <!-- 画布区域 -->
-      <div ref="canvasWrapperRef" class="canvas-wrapper">
-        <EditorCanvas />
-      </div>
+            <div ref="canvasWrapperRef" class="canvas-wrapper">
+              <EditorCanvas @stage-ready="handleStageReady" />
+            </div>
 
       <!-- 右侧面板：图片列表和标注列表 -->
       <div class="side-panel">

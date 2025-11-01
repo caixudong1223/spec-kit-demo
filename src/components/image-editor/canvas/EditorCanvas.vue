@@ -26,6 +26,21 @@ const canvasStyle = computed(() => ({
   height: `${stageConfig.value.height}px`,
 }))
 
+// 容器样式（包含光标）
+const containerStyle = computed(() => {
+  let cursor = 'default'
+
+  if (canvasStore.activeTool === 'pan') {
+    cursor = 'grab'
+  } else if (canvasStore.activeTool === 'annotation-node') {
+    cursor = 'crosshair'
+  } else if (canvasStore.activeTool === 'annotation-line') {
+    cursor = 'crosshair'
+  }
+
+  return { cursor }
+})
+
 // 处理舞台准备就绪
 function handleStageReady(stage: any) {
   stageRef.value = stage
@@ -73,7 +88,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="containerRef" class="editor-canvas-container">
+  <div ref="containerRef" class="editor-canvas-container" :style="containerStyle">
     <div class="canvas-content">
       <div class="editor-canvas" :style="canvasStyle">
         <!-- 占位符 -->

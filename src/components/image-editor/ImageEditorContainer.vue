@@ -5,6 +5,7 @@ import { useCanvasStore } from '@/stores/image-editor/canvas'
 import { onMounted, ref, watch } from 'vue'
 import EditorCanvas from './canvas/EditorCanvas.vue'
 import ImageList from './panels/ImageList.vue'
+import AnnotationList from './panels/AnnotationList.vue'
 import AnnotationTools from './toolbar/AnnotationTools.vue'
 import ImageEditorToolbar from './toolbar/ImageEditorToolbar.vue'
 import ImageTools from './toolbar/ImageTools.vue'
@@ -28,6 +29,7 @@ const emit = defineEmits<Emits>()
 
 const canvasStore = useCanvasStore()
 const canvasWrapperRef = ref<HTMLDivElement | null>(null)
+const activeTab = ref('images')
 
 // 注册键盘快捷键
 useKeyboardShortcuts()
@@ -74,9 +76,16 @@ canvasStore.$subscribe((mutation, state) => {
         <EditorCanvas />
       </div>
 
-      <!-- 右侧面板：图片列表 -->
+      <!-- 右侧面板：图片列表和标注列表 -->
       <div class="side-panel">
-        <ImageList />
+        <el-tabs v-model="activeTab" class="panel-tabs">
+          <el-tab-pane label="图片" name="images">
+            <ImageList />
+          </el-tab-pane>
+          <el-tab-pane label="标注" name="annotations">
+            <AnnotationList />
+          </el-tab-pane>
+        </el-tabs>
       </div>
     </div>
   </div>
@@ -110,5 +119,23 @@ canvasStore.$subscribe((mutation, state) => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background-color: #ffffff;
+}
+
+.panel-tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-tabs :deep(.el-tabs__content) {
+  flex: 1;
+  overflow: hidden;
+}
+
+.panel-tabs :deep(.el-tab-pane) {
+  height: 100%;
+  overflow: hidden;
 }
 </style>

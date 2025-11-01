@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCanvasStore } from '@/stores/image-editor/canvas'
 import { useImagesStore } from '@/stores/image-editor/images'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import ImageLayer from './ImageLayer.vue'
 import TransformerControls from './TransformerControls.vue'
 
@@ -73,35 +73,18 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    ref="containerRef"
-    class="editor-canvas-container"
-  >
+  <div ref="containerRef" class="editor-canvas-container">
     <div class="canvas-content">
-      <div
-        class="editor-canvas"
-        :style="canvasStyle"
-      >
+      <div class="editor-canvas" :style="canvasStyle">
         <!-- 占位符 -->
-        <div
-          v-if="showPlaceholder"
-          class="canvas-placeholder"
-        >
-          <p class="text-gray-400 text-lg">
-            画布区域
-          </p>
-          <p class="text-gray-300 text-sm">
-            {{ stageConfig.width }} x {{ stageConfig.height }}
-          </p>
+        <div v-if="showPlaceholder" class="canvas-placeholder">
+          <p class="text-gray-400 text-lg">画布区域</p>
+          <p class="text-gray-300 text-sm">{{ stageConfig.width }} x {{ stageConfig.height }}</p>
           <p class="text-gray-300 text-sm">
             缩放: {{ (canvasStore.view.scale * 100).toFixed(0) }}%
           </p>
-          <p class="text-gray-400 text-sm mt-4">
-            点击工具栏的"加载图片"按钮开始
-          </p>
-          <p class="text-gray-400 text-xs mt-2">
-            滚动鼠标滚轮缩放
-          </p>
+          <p class="text-gray-400 text-sm mt-4">点击工具栏的"加载图片"按钮开始</p>
+          <p class="text-gray-400 text-xs mt-2">滚动鼠标滚轮缩放</p>
         </div>
 
         <!-- Konva 图片层 -->
@@ -117,9 +100,6 @@ onUnmounted(() => {
           :stage="stageRef"
           :layer="layerRef"
         />
-
-        <!-- 标注层 -->
-        <!-- TODO: AnnotationLayer 组件将在 User Story 2/3 中实现 -->
       </div>
     </div>
   </div>
@@ -137,7 +117,11 @@ onUnmounted(() => {
     linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
     linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
   background-size: 20px 20px;
-  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  background-position:
+    0 0,
+    0 10px,
+    10px -10px,
+    -10px 0px;
 }
 
 .canvas-content {
@@ -148,7 +132,9 @@ onUnmounted(() => {
 
 .editor-canvas {
   position: relative;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
   display: inline-block;
 }
 

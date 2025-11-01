@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useImagesStore } from '@/stores/image-editor/images'
+import { useAnnotationsStore } from '@/stores/image-editor/annotations'
 import { useCanvasStore } from '@/stores/image-editor/canvas'
+import { useImagesStore } from '@/stores/image-editor/images'
 import type { EditorImage } from '@/types/image-editor'
+import { computed, ref } from 'vue'
+import AnnotationLayer from './AnnotationLayer.vue'
 
 const imagesStore = useImagesStore()
 const canvasStore = useCanvasStore()
+const annotationsStore = useAnnotationsStore()
+
+// 标注层组件引用
+const annotationLayerRef = ref<InstanceType<typeof AnnotationLayer> | null>(null)
 
 // Konva Stage 引用
 const stageRef = ref<any>(null)
@@ -61,13 +67,44 @@ function handleTransformEnd(image: EditorImage, event: any) {
   // 不再处理这个事件，由 TransformerControls 处理
 }
 
-// 处理舞台点击（取消选择）
+// 处理舞台点击（取消选择或创建标注节点）
 function handleStageClick(event: any) {
   if (!canvasStore.isEditMode) return
 
-  // 如果点击的是舞台背景（不是图片），取消选择
+  const targetClassName = event.target.getClassName()
+
+  // 在 annotation-node 模式下创建节点
+  if (canvasStore.activeTool === 'annotation-node') {
+    // 如果点击的是已有的节点（Circle 或 Text），不创建新节点
+    if (targetClassName === 'Circle' || targetClassName === 'Text') {
+      return
+    }
+
+    const stage = event.target.getStage()
+    const layer = stage.findOne('Layer')
+    if (!layer) return
+
+    // 获取鼠标相对于 Stage 的位置
+    const pointerPos = stage.getPointerPosition()
+
+    // 转换为 Layer 的局部坐标
+    const layerX = layer.x()
+    const layerY = layer.y()
+    const layerScaleX = layer.scaleX()
+    const layerScaleY = layer.scaleY()
+
+    const localX = (pointerPos.x - layerX) / layerScaleX
+    const localY = (pointerPos.y - layerY) / layerScaleY
+
+    // 创建节点
+    annotationsStore.addNode(localX, localY)
+    return
+  }
+
+  // 其他模式下，如果点击的是舞台背景，取消选择
   if (event.target === event.target.getStage()) {
     imagesStore.deselectAllImages()
+    annotationsStore.deselectAllAnnotations()
   }
 }
 
@@ -88,7 +125,7 @@ function handleStageMouseDown(event: any) {
   panStartPos.value = { x: pointerPos.x, y: pointerPos.y }
   layerStartPos.value = {
     x: canvasStore.view.position.x,
-    y: canvasStore.view.position.y
+    y: canvasStore.view.position.y,
   }
 
   // 修改鼠标样式
@@ -139,6 +176,25 @@ function getImageConfig(image: EditorImage) {
   }
 }
 
+// 处理节点拖拽结束
+function handleNodeDragEnd(node: any, event: any) {
+  const konvaNode = event.target
+  const groupNode = konvaNode.getClassName() === 'Group' ? konvaNode : konvaNode.getParent()
+
+  // 获取 Group 的坐标
+  const x = groupNode.x()
+  const y = groupNode.y()
+
+  annotationsStore.updateNodePosition(node.id, x, y)
+}
+
+// 处理节点点击（选择）
+function handleNodeClick(node: any) {
+  if (!canvasStore.isEditMode) return
+
+  annotationsStore.selectNode(node.id)
+}
+
 // Emit for parent component
 const emit = defineEmits<{
   stageReady: [stage: any]
@@ -181,8 +237,50 @@ function handleStageReady(stage: any) {
           @tap="() => handleImageClick(image)"
           @transformend="(e: any) => handleTransformEnd(image, e)"
         />
+
+        <!-- 渲染所有标注节点 -->
+        <v-group
+          v-for="node in annotationsStore.visibleNodes"
+          :key="node.id"
+          :config="{
+            x: node.position.x,
+            y: node.position.y,
+            draggable: canvasStore.isEditMode && canvasStore.activeTool === 'select',
+          }"
+          @dragend="(e: any) => handleNodeDragEnd(node, e)"
+          @click="() => handleNodeClick(node)"
+          @tap="() => handleNodeClick(node)"
+        >
+          <!-- 节点圆形背景 -->
+          <v-circle
+            :config="{
+              radius: node.style.radius,
+              fill: node.style.fill,
+              stroke: node.isSelected ? '#67C23A' : node.style.stroke,
+              strokeWidth: node.isSelected ? 3 : node.style.strokeWidth,
+            }"
+          />
+
+          <!-- 节点序号文本 -->
+          <v-text
+            :config="{
+              text: String(node.number),
+              fontSize: node.style.fontSize,
+              fill: node.style.textColor,
+              align: 'center',
+              verticalAlign: 'middle',
+              offsetX: node.style.radius,
+              offsetY: node.style.radius,
+              width: node.style.radius * 2,
+              height: node.style.radius * 2,
+            }"
+          />
+        </v-group>
       </v-layer>
     </v-stage>
+
+    <!-- 标注层逻辑组件（不渲染） -->
+    <AnnotationLayer ref="annotationLayerRef" />
   </div>
 </template>
 

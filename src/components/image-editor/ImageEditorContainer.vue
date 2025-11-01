@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
-import { useCanvasStore } from '@/stores/image-editor/canvas'
-import { useKeyboardShortcuts } from '@/composables/image-editor/useKeyboardShortcuts'
 import { useCanvasResize } from '@/composables/image-editor/useCanvasResize'
+import { useKeyboardShortcuts } from '@/composables/image-editor/useKeyboardShortcuts'
+import { useCanvasStore } from '@/stores/image-editor/canvas'
+import { onMounted, ref, watch } from 'vue'
 import EditorCanvas from './canvas/EditorCanvas.vue'
+import ImageList from './panels/ImageList.vue'
+import AnnotationTools from './toolbar/AnnotationTools.vue'
 import ImageEditorToolbar from './toolbar/ImageEditorToolbar.vue'
 import ImageTools from './toolbar/ImageTools.vue'
-import ImageList from './panels/ImageList.vue'
 
 // Props
 interface Props {
@@ -63,13 +64,13 @@ canvasStore.$subscribe((mutation, state) => {
     <!-- 图片工具栏 -->
     <ImageTools />
 
+    <!-- 标注工具栏 -->
+    <AnnotationTools />
+
     <!-- 主工作区 -->
     <div class="main-content">
       <!-- 画布区域 -->
-      <div
-        ref="canvasWrapperRef"
-        class="canvas-wrapper"
-      >
+      <div ref="canvasWrapperRef" class="canvas-wrapper">
         <EditorCanvas />
       </div>
 

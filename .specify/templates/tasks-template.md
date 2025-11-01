@@ -25,21 +25,21 @@ description: "Task list template for feature implementation"
 - **Mobile**: `api/src/`, `ios/src/` or `android/src/`
 - Paths shown below assume single project - adjust based on plan.md structure
 
-<!-- 
+<!--
   ============================================================================
   IMPORTANT: The tasks below are SAMPLE TASKS for illustration purposes only.
-  
+
   The /speckit.tasks command MUST replace these with actual tasks based on:
   - User stories from spec.md (with their priorities P1, P2, P3...)
   - Feature requirements from plan.md
   - Entities from data-model.md
   - Endpoints from contracts/
-  
+
   Tasks MUST be organized by user story so each story can be:
   - Implemented independently
   - Tested independently
   - Delivered as an MVP increment
-  
+
   DO NOT keep these sample tasks in the generated tasks.md file.
   ============================================================================
 -->
@@ -156,6 +156,15 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation
+
+### Quality Gates (Constitution Compliance)
+
+- [ ] TXXX TypeScript 类型检查通过（无错误）
+- [ ] TXXX ESLint 和 Prettier 检查通过
+- [ ] TXXX [P] Lighthouse 性能评分验证 (> 90)
+- [ ] TXXX [P] Web Vitals 指标验证 (LCP < 2.5s, FID < 100ms, CLS < 0.1)
+- [ ] TXXX [P] 可访问性审计 (WCAG 合规)
+- [ ] TXXX 响应式设计验证（移动端、平板、桌面）
 
 ---
 

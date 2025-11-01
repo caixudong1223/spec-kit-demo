@@ -1,6 +1,6 @@
-# [PROJECT NAME] Development Guidelines
+﻿# spec-kit-demo Development Guidelines
 
-Auto-generated from all feature plans. Last updated: [DATE]
+Auto-generated from all feature plans. Last updated: 2025-10-31
 
 ## Constitution
 
@@ -14,25 +14,27 @@ Key principles:
 
 ## Active Technologies
 
-[EXTRACTED FROM ALL PLAN.MD FILES]
+- TypeScript 5.2+ / JavaScript ES2022 (001-image-editor)
 
 ## Project Structure
 
 ```text
-[ACTUAL STRUCTURE FROM PLANS]
+backend/
+frontend/
+tests/
 ```
 
 ## Commands
 
-[ONLY COMMANDS FOR ACTIVE TECHNOLOGIES]
+npm test; npm run lint
 
 ## Code Style
 
-[LANGUAGE-SPECIFIC, ONLY FOR LANGUAGES IN USE]
+TypeScript 5.2+ / JavaScript ES2022: Follow standard conventions
 
 ## Recent Changes
 
-[LAST 3 FEATURES AND WHAT THEY ADDED]
+- 001-image-editor: Added TypeScript 5.2+ / JavaScript ES2022
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

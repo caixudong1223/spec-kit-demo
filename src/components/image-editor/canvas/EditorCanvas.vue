@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { useAnnotationsStore } from '@/stores/image-editor/annotations'
 import { useCanvasStore } from '@/stores/image-editor/canvas'
 import { useImagesStore } from '@/stores/image-editor/images'
-import { useAnnotationsStore } from '@/stores/image-editor/annotations'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import ImageLayer from './ImageLayer.vue'
 import LineTextEditor from './LineTextEditor.vue'
@@ -67,12 +67,17 @@ function handleStageReady(stage: any) {
 function handleWheel(event: WheelEvent) {
   event.preventDefault()
 
-  const scaleBy = 1.1
   const oldScale = canvasStore.view.scale
+  const zoomFactor = 0.1 // 每次滚动缩放 10%
 
-  // 缩放方向
-  const newScale = event.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy
+  // 反转方向：向上滚动（deltaY < 0）放大，向下滚动（deltaY > 0）缩小
+  const direction = event.deltaY > 0 ? -1 : 1
+  const scaleChange = zoomFactor * direction
 
+  // 计算新缩放值
+  const newScale = oldScale + scaleChange
+
+  // 使用 zoomTo 确保在限制范围内（0.1 ~ 5.0）
   canvasStore.zoomTo(newScale)
 }
 

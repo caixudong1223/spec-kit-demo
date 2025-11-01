@@ -1,4 +1,5 @@
 // useKeyboardShortcuts composable - 键盘快捷键
+import { useAnnotationsStore } from '@/stores/image-editor/annotations'
 import { useCanvasStore } from '@/stores/image-editor/canvas'
 import { useImagesStore } from '@/stores/image-editor/images'
 import { KEYBOARD_SHORTCUTS } from '@/types/image-editor/defaults'
@@ -7,6 +8,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 export function useKeyboardShortcuts() {
   const imagesStore = useImagesStore()
   const canvasStore = useCanvasStore()
+  const annotationsStore = useAnnotationsStore()
 
   // 记录按下空格键前的工具
   const previousTool = ref<string | null>(null)
@@ -38,18 +40,26 @@ export function useKeyboardShortcuts() {
       return
     }
 
-    // Delete - 删除选中图片
+    // Delete - 删除选中的图片或标注
     if (key === KEYBOARD_SHORTCUTS.DELETE || key === 'Backspace') {
-      if (imagesStore.hasSelection) {
-        event.preventDefault()
+      event.preventDefault()
+
+      // 优先删除标注（节点或线段）
+      if (annotationsStore.selectedNode) {
+        annotationsStore.deleteNode(annotationsStore.selectedNode.id)
+      } else if (annotationsStore.selectedLine) {
+        annotationsStore.deleteLine(annotationsStore.selectedLine.id)
+      } else if (imagesStore.hasSelection) {
+        // 如果没有选中标注，则删除选中的图片
         imagesStore.deleteSelectedImages()
       }
       return
     }
 
-    // Escape - 取消选择
+    // Escape - 取消选择（标注和图片）
     if (key === KEYBOARD_SHORTCUTS.ESCAPE) {
       event.preventDefault()
+      annotationsStore.deselectAllAnnotations()
       imagesStore.deselectAllImages()
       return
     }

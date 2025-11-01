@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import rotateSvg from '@/assets/rotate.svg'
 import { useAnnotationsStore } from '@/stores/image-editor/annotations'
 import { useCanvasStore } from '@/stores/image-editor/canvas'
 import { useImagesStore } from '@/stores/image-editor/images'
 import type { EditorImage } from '@/types/image-editor'
-import { computed, ref, onMounted, nextTick, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import AnnotationLayer from './AnnotationLayer.vue'
 
 const imagesStore = useImagesStore()
@@ -108,6 +109,12 @@ const transformerConfig = computed(() => ({
   anchorCornerRadius: 4,
   keepRatio: false,
   centeredScaling: false,
+  // 自定义旋转光标（使用 rotate.svg）
+  rotateAnchorCursor: `url("${rotateSvg}") 16 16, grab`,
+  // 角落锚点光标（用于缩放和旋转）
+  anchorCornerCursor: 'nwse-resize',
+  // 边缘锚点光标（用于单边缩放）
+  anchorSideCursor: 'ew-resize',
 }))
 
 // 更新 Transformer 的目标节点
@@ -407,7 +414,7 @@ function calculateLineLength(line: any): string {
 function calculateLineAngle(line: any): number {
   const dx = line.points.end.x - line.points.start.x
   const dy = line.points.end.y - line.points.start.y
-  let angle = Math.atan2(dy, dx) * 180 / Math.PI
+  let angle = (Math.atan2(dy, dx) * 180) / Math.PI
 
   // 保持文字始终正向显示（不倒置）
   if (angle > 90) {
@@ -440,7 +447,7 @@ function calculateTextPosition(line: any) {
 
   return {
     x: midX + perpX * offset,
-    y: midY + perpY * offset
+    y: midY + perpY * offset,
   }
 }
 
@@ -559,12 +566,7 @@ function handleStageReady(stage: any) {
         <v-line
           v-if="isDrawingLine && drawingLine"
           :config="{
-            points: [
-              drawingLine.startX,
-              drawingLine.startY,
-              drawingLine.endX,
-              drawingLine.endY,
-            ],
+            points: [drawingLine.startX, drawingLine.startY, drawingLine.endX, drawingLine.endY],
             stroke: '#409EFF',
             strokeWidth: 2,
             dash: [5, 5],

@@ -3,7 +3,7 @@ import { useAnnotationsStore } from '@/stores/image-editor/annotations'
 import { useCanvasStore } from '@/stores/image-editor/canvas'
 import { useImagesStore } from '@/stores/image-editor/images'
 import type { EditorImage } from '@/types/image-editor'
-import { computed, ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted, nextTick, watch } from 'vue'
 import AnnotationLayer from './AnnotationLayer.vue'
 
 const imagesStore = useImagesStore()
@@ -16,6 +16,9 @@ const annotationLayerRef = ref<InstanceType<typeof AnnotationLayer> | null>(null
 // Konva Stage 引用（直接使用 ref）
 const konvaStageRef = ref<any>(null)
 const stageRef = ref<any>(null)
+
+// Transformer 引用
+const transformerRef = ref<any>(null)
 
 // 计算可见图片（按 zIndex 排序）
 const sortedImages = computed(() => imagesStore.sortedByZIndex)
@@ -70,11 +73,99 @@ function handleImageClick(image: EditorImage) {
   if (!canvasStore.isEditMode) return
 
   imagesStore.selectImage(image.id)
+
+  // 更新 Transformer
+  nextTick(() => {
+    updateTransformer()
+  })
 }
 
-// 处理图片变换结束（这个事件不应该被触发，因为变换由 Transformer 处理）
-function handleTransformEnd(image: EditorImage, event: any) {
-  // 不再处理这个事件，由 TransformerControls 处理
+// ========== Transformer 相关逻辑 ==========
+
+// 当前选中的图片
+const selectedImage = computed(() => {
+  return imagesStore.selectedImages[0]
+})
+
+// Transformer 配置
+const transformerConfig = computed(() => ({
+  rotateEnabled: true,
+  enabledAnchors: [
+    'top-left',
+    'top-right',
+    'bottom-left',
+    'bottom-right',
+    'top-center',
+    'bottom-center',
+    'middle-left',
+    'middle-right',
+  ],
+  borderStroke: '#409EFF',
+  borderStrokeWidth: 2,
+  anchorFill: '#FFFFFF',
+  anchorStroke: '#409EFF',
+  anchorSize: 8,
+  anchorCornerRadius: 4,
+  keepRatio: false,
+  centeredScaling: false,
+}))
+
+// 更新 Transformer 的目标节点
+function updateTransformer() {
+  if (!transformerRef.value || !stageRef.value) return
+
+  const transformer = transformerRef.value.getNode()
+
+  if (!selectedImage.value) {
+    transformer.nodes([])
+    return
+  }
+
+  // 查找选中图片的 Konva 节点
+  const layer = transformer.getLayer()
+  if (!layer) return
+
+  const imageNode = layer.findOne(`#${selectedImage.value.id}`)
+
+  if (imageNode) {
+    transformer.nodes([imageNode])
+  } else {
+    transformer.nodes([])
+  }
+}
+
+// 监听选中状态变化
+watch(
+  () => selectedImage.value?.id,
+  () => {
+    nextTick(() => {
+      updateTransformer()
+    })
+  }
+)
+
+// 监听编辑模式变化
+watch(
+  () => canvasStore.isEditMode,
+  (isEdit) => {
+    if (!isEdit && transformerRef.value) {
+      const transformer = transformerRef.value.getNode()
+      transformer.nodes([])
+    } else {
+      updateTransformer()
+    }
+  }
+)
+
+// 处理 Transformer 变换结束
+function handleTransformEnd(event: any) {
+  const node = event.target
+  if (!selectedImage.value) return
+
+  // 更新图片的变换属性
+  imagesStore.updateImagePosition(selectedImage.value.id, node.x(), node.y())
+  imagesStore.updateImageRotation(selectedImage.value.id, node.rotation())
+  imagesStore.updateImageScale(selectedImage.value.id, node.scaleX(), node.scaleY())
 }
 
 // 处理舞台点击（取消选择或创建标注节点）
@@ -371,6 +462,11 @@ onMounted(async () => {
       stageRef.value = stage
       console.log('🖼️ ImageLayer: Emitting stageReady to EditorCanvas')
       emit('stageReady', stage)
+
+      // 初始化 Transformer
+      nextTick(() => {
+        updateTransformer()
+      })
     } else {
       console.error('❌ ImageLayer: Failed to get stage from ref', konvaStageRef.value)
     }
@@ -418,7 +514,6 @@ function handleStageReady(stage: any) {
           @dragend="(e: any) => handleDragEnd(image, e)"
           @click="() => handleImageClick(image)"
           @tap="() => handleImageClick(image)"
-          @transformend="(e: any) => handleTransformEnd(image, e)"
         />
 
         <!-- 渲染所有标注节点 -->
@@ -543,6 +638,14 @@ function handleStageReady(stage: any) {
             @tap="(e: any) => handleTextClick(line, e)"
           />
         </v-group>
+
+        <!-- Transformer 控制（旋转和缩放） -->
+        <v-transformer
+          v-if="canvasStore.isEditMode && selectedImage && canvasStore.activeTool === 'select'"
+          ref="transformerRef"
+          :config="transformerConfig"
+          @transformend="handleTransformEnd"
+        />
       </v-layer>
     </v-stage>
 

@@ -4,7 +4,6 @@ import { useImagesStore } from '@/stores/image-editor/images'
 import { useAnnotationsStore } from '@/stores/image-editor/annotations'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import ImageLayer from './ImageLayer.vue'
-import TransformerControls from './TransformerControls.vue'
 import LineTextEditor from './LineTextEditor.vue'
 
 const canvasStore = useCanvasStore()
@@ -14,7 +13,6 @@ const annotationsStore = useAnnotationsStore()
 const containerRef = ref<HTMLDivElement | null>(null)
 const stageRef = ref<any>(null)
 const layerRef = ref<any>(null)
-const transformerRef = ref<InstanceType<typeof TransformerControls> | null>(null)
 
 // 计算画布配置
 const stageConfig = computed(() => ({
@@ -63,12 +61,7 @@ function handleStageReady(stage: any) {
   emit('stageReady', stage)
 }
 
-// 处理 Transformer 需要更新
-function handleTransformerNeedsUpdate() {
-  if (transformerRef.value) {
-    transformerRef.value.updateTransformer()
-  }
-}
+// Transformer 已整合到 ImageLayer，不再需要单独处理
 
 // 处理鼠标滚轮缩放
 function handleWheel(event: WheelEvent) {
@@ -115,19 +108,8 @@ onUnmounted(() => {
           <p class="text-gray-400 text-xs mt-2">滚动鼠标滚轮缩放</p>
         </div>
 
-        <!-- Konva 图片层 -->
-        <ImageLayer
-          @stage-ready="handleStageReady"
-          @transformer-needs-update="handleTransformerNeedsUpdate"
-        />
-
-        <!-- Transformer 控制 -->
-        <TransformerControls
-          v-if="stageRef"
-          ref="transformerRef"
-          :stage="stageRef"
-          :layer="layerRef"
-        />
+        <!-- Konva 图片层（包含 Transformer） -->
+        <ImageLayer @stage-ready="handleStageReady" />
 
         <!-- 线段文本编辑器 -->
         <LineTextEditor

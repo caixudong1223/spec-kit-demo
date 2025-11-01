@@ -4,8 +4,8 @@ import { useKeyboardShortcuts } from '@/composables/image-editor/useKeyboardShor
 import { useCanvasStore } from '@/stores/image-editor/canvas'
 import { onMounted, ref, watch } from 'vue'
 import EditorCanvas from './canvas/EditorCanvas.vue'
-import ImageList from './panels/ImageList.vue'
 import AnnotationList from './panels/AnnotationList.vue'
+import ImageList from './panels/ImageList.vue'
 import AnnotationTools from './toolbar/AnnotationTools.vue'
 import ImageEditorToolbar from './toolbar/ImageEditorToolbar.vue'
 import ImageTools from './toolbar/ImageTools.vue'
@@ -80,9 +80,9 @@ canvasStore.$subscribe((mutation, state) => {
     <!-- 主工作区 -->
     <div class="main-content">
       <!-- 画布区域 -->
-            <div ref="canvasWrapperRef" class="canvas-wrapper">
-              <EditorCanvas @stage-ready="handleStageReady" />
-            </div>
+      <div ref="canvasWrapperRef" class="canvas-wrapper">
+        <EditorCanvas @stage-ready="handleStageReady" />
+      </div>
 
       <!-- 右侧面板：图片列表和标注列表 -->
       <div class="side-panel">

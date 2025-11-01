@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { useCanvasStore } from '@/stores/image-editor/canvas'
 import { useImagesStore } from '@/stores/image-editor/images'
+import { useAnnotationsStore } from '@/stores/image-editor/annotations'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import ImageLayer from './ImageLayer.vue'
 import TransformerControls from './TransformerControls.vue'
+import LineTextEditor from './LineTextEditor.vue'
 
 const canvasStore = useCanvasStore()
 const imagesStore = useImagesStore()
+const annotationsStore = useAnnotationsStore()
 
 const containerRef = ref<HTMLDivElement | null>(null)
 const stageRef = ref<any>(null)
@@ -114,6 +117,14 @@ onUnmounted(() => {
           ref="transformerRef"
           :stage="stageRef"
           :layer="layerRef"
+        />
+
+        <!-- 线段文本编辑器 -->
+        <LineTextEditor
+          v-for="line in annotationsStore.lines"
+          v-show="line.isEditing"
+          :key="`editor-${line.id}`"
+          :line-id="line.id"
         />
       </div>
     </div>

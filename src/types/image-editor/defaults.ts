@@ -40,7 +40,7 @@ export const DEFAULT_ANNOTATION_LINE: Partial<AnnotationLine> = {
     lineCap: 'round',
     dash: [],
     textColor: '#F56C6C',
-    fontSize: 14,
+    fontSize: 18,  // 增大字体
     textBackground: '#FFFFFF',
     showArrows: true,
   },

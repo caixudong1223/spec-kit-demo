@@ -38,6 +38,15 @@ const isPanning = ref(false)
 const panStartPos = ref({ x: 0, y: 0 })
 const layerStartPos = ref({ x: 0, y: 0 })
 
+// 线段绘制状态
+const isDrawingLine = ref(false)
+const drawingLine = ref<{
+  startX: number
+  startY: number
+  endX: number
+  endY: number
+} | null>(null)
+
 // 处理图片拖拽结束
 function handleDragEnd(image: EditorImage, event: any) {
   if (image.isLocked || !canvasStore.isEditMode) return
@@ -108,8 +117,48 @@ function handleStageClick(event: any) {
   }
 }
 
-// 处理舞台鼠标按下（开始平移）
+// 处理舞台鼠标按下（开始平移或绘制线段）
 function handleStageMouseDown(event: any) {
+  const stage = event.target.getStage()
+  const pointerPos = stage.getPointerPosition()
+
+  // 在 annotation-line 模式下开始绘制线段
+  if (canvasStore.activeTool === 'annotation-line' && canvasStore.isEditMode) {
+    const targetClassName = event.target.getClassName()
+
+    // 如果点击的是已有的线段或节点，不开始绘制
+    if (
+      targetClassName === 'Line' ||
+      targetClassName === 'Arrow' ||
+      targetClassName === 'Circle' ||
+      targetClassName === 'Text'
+    ) {
+      return
+    }
+
+    const layer = stage.findOne('Layer')
+    if (!layer) return
+
+    // 转换为 Layer 的局部坐标
+    const layerX = layer.x()
+    const layerY = layer.y()
+    const layerScaleX = layer.scaleX()
+    const layerScaleY = layer.scaleY()
+
+    const localX = (pointerPos.x - layerX) / layerScaleX
+    const localY = (pointerPos.y - layerY) / layerScaleY
+
+    // 开始绘制线段
+    isDrawingLine.value = true
+    drawingLine.value = {
+      startX: localX,
+      startY: localY,
+      endX: localX,
+      endY: localY,
+    }
+    return
+  }
+
   // 只在平移模式下响应
   if (canvasStore.activeTool !== 'pan') return
 
@@ -117,9 +166,6 @@ function handleStageMouseDown(event: any) {
   if (event.target !== event.target.getStage() && event.target.getClassName() !== 'Stage') {
     return
   }
-
-  const stage = event.target.getStage()
-  const pointerPos = stage.getPointerPosition()
 
   isPanning.value = true
   panStartPos.value = { x: pointerPos.x, y: pointerPos.y }
@@ -132,12 +178,33 @@ function handleStageMouseDown(event: any) {
   stage.container().style.cursor = 'grabbing'
 }
 
-// 处理舞台鼠标移动（平移中）
+// 处理舞台鼠标移动（平移中或绘制线段中）
 function handleStageMouseMove(event: any) {
-  if (!isPanning.value || canvasStore.activeTool !== 'pan') return
-
   const stage = event.target.getStage()
   const pointerPos = stage.getPointerPosition()
+
+  // 在绘制线段过程中更新终点
+  if (isDrawingLine.value && drawingLine.value) {
+    const layer = stage.findOne('Layer')
+    if (!layer) return
+
+    // 转换为 Layer 的局部坐标
+    const layerX = layer.x()
+    const layerY = layer.y()
+    const layerScaleX = layer.scaleX()
+    const layerScaleY = layer.scaleY()
+
+    const localX = (pointerPos.x - layerX) / layerScaleX
+    const localY = (pointerPos.y - layerY) / layerScaleY
+
+    // 更新线段终点
+    drawingLine.value.endX = localX
+    drawingLine.value.endY = localY
+    return
+  }
+
+  // 平移画布
+  if (!isPanning.value || canvasStore.activeTool !== 'pan') return
 
   // 计算偏移量
   const dx = pointerPos.x - panStartPos.value.x
@@ -150,8 +217,32 @@ function handleStageMouseMove(event: any) {
   canvasStore.panTo(newX, newY)
 }
 
-// 处理舞台鼠标释放（平移结束）
+// 处理舞台鼠标释放（平移结束或线段绘制完成）
 function handleStageMouseUp(event: any) {
+  // 完成线段绘制
+  if (isDrawingLine.value && drawingLine.value) {
+    const { startX, startY, endX, endY } = drawingLine.value
+
+    // 计算线段长度，如果太短则不创建
+    const length = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2))
+    if (length > 5) {
+      // 创建线段
+      const line = annotationsStore.addLine(startX, startY, endX, endY, '')
+
+      // 自动选中新创建的线段
+      annotationsStore.selectLine(line.id)
+
+      // 开始编辑文本
+      annotationsStore.startEditingLine(line.id)
+    }
+
+    // 重置绘制状态
+    isDrawingLine.value = false
+    drawingLine.value = null
+    return
+  }
+
+  // 平移结束
   if (!isPanning.value) return
 
   isPanning.value = false
@@ -193,6 +284,72 @@ function handleNodeClick(node: any) {
   if (!canvasStore.isEditMode) return
 
   annotationsStore.selectNode(node.id)
+}
+
+// 处理线段点击（选择）
+function handleLineClick(line: any) {
+  if (!canvasStore.isEditMode) return
+
+  annotationsStore.selectLine(line.id)
+}
+
+// 处理文本点击（开始编辑）
+function handleTextClick(line: any, event: any) {
+  if (!canvasStore.isEditMode) return
+
+  event.cancelBubble = true // 阻止事件冒泡到 group
+
+  annotationsStore.selectLine(line.id)
+  annotationsStore.startEditingLine(line.id)
+}
+
+// 计算线段长度（用于显示）
+function calculateLineLength(line: any): string {
+  const dx = line.points.end.x - line.points.start.x
+  const dy = line.points.end.y - line.points.start.y
+  const length = Math.sqrt(dx * dx + dy * dy)
+  return `${Math.round(length)}px`
+}
+
+// 计算线段角度（度数）
+function calculateLineAngle(line: any): number {
+  const dx = line.points.end.x - line.points.start.x
+  const dy = line.points.end.y - line.points.start.y
+  let angle = Math.atan2(dy, dx) * 180 / Math.PI
+
+  // 保持文字始终正向显示（不倒置）
+  if (angle > 90) {
+    angle = angle - 180
+  } else if (angle < -90) {
+    angle = angle + 180
+  }
+
+  return angle
+}
+
+// 计算文本位置（线段中点上方，与线保持距离）
+function calculateTextPosition(line: any) {
+  const midX = (line.points.start.x + line.points.end.x) / 2
+  const midY = (line.points.start.y + line.points.end.y) / 2
+
+  // 计算线段的垂直方向（向上偏移）
+  const dx = line.points.end.x - line.points.start.x
+  const dy = line.points.end.y - line.points.start.y
+  const length = Math.sqrt(dx * dx + dy * dy)
+
+  if (length === 0) return { x: midX, y: midY }
+
+  // 垂直向量（逆时针旋转90度）
+  const perpX = -dy / length
+  const perpY = dx / length
+
+  // 偏移距离（15像素）
+  const offset = 15
+
+  return {
+    x: midX + perpX * offset,
+    y: midY + perpY * offset
+  }
 }
 
 // Emit for parent component
@@ -274,6 +431,90 @@ function handleStageReady(stage: any) {
               width: node.style.radius * 2,
               height: node.style.radius * 2,
             }"
+          />
+        </v-group>
+
+        <!-- 渲染正在绘制的线段 -->
+        <v-line
+          v-if="isDrawingLine && drawingLine"
+          :config="{
+            points: [
+              drawingLine.startX,
+              drawingLine.startY,
+              drawingLine.endX,
+              drawingLine.endY,
+            ],
+            stroke: '#409EFF',
+            strokeWidth: 2,
+            dash: [5, 5],
+            lineCap: 'round',
+            lineJoin: 'round',
+          }"
+        />
+
+        <!-- 渲染所有标注线 -->
+        <v-group
+          v-for="line in annotationsStore.visibleLines"
+          :key="line.id"
+          @click="() => handleLineClick(line)"
+          @tap="() => handleLineClick(line)"
+        >
+          <!-- 线段本体（双向箭头） -->
+          <v-arrow
+            v-if="line.style.showArrows"
+            :config="{
+              points: [
+                line.points.start.x,
+                line.points.start.y,
+                line.points.end.x,
+                line.points.end.y,
+              ],
+              stroke: line.isSelected ? '#67C23A' : line.style.stroke,
+              strokeWidth: line.isSelected ? 3 : line.style.strokeWidth,
+              fill: line.isSelected ? '#67C23A' : line.style.stroke,
+              lineCap: line.style.lineCap,
+              dash: line.style.dash,
+              pointerLength: 12,
+              pointerWidth: 12,
+              pointerAtBeginning: true,
+              pointerAtEnding: true,
+            }"
+          />
+          <v-line
+            v-else
+            :config="{
+              points: [
+                line.points.start.x,
+                line.points.start.y,
+                line.points.end.x,
+                line.points.end.y,
+              ],
+              stroke: line.isSelected ? '#67C23A' : line.style.stroke,
+              strokeWidth: line.isSelected ? 3 : line.style.strokeWidth,
+              lineCap: line.style.lineCap,
+              dash: line.style.dash,
+            }"
+          />
+
+          <!-- 线段文本标签（与线平行，保持间距） -->
+          <v-text
+            :config="{
+              x: calculateTextPosition(line).x,
+              y: calculateTextPosition(line).y,
+              text: line.text || calculateLineLength(line),
+              fontSize: line.style.fontSize,
+              fill: line.style.textColor,
+              fontStyle: 'bold',
+              align: 'center',
+              verticalAlign: 'middle',
+              rotation: calculateLineAngle(line),
+              offsetX: 50,
+              offsetY: 9,
+              width: 100,
+              listening: canvasStore.isEditMode,
+            }"
+            @click="(e: any) => handleTextClick(line, e)"
+            @tap="(e: any) => handleTextClick(line, e)"
           />
         </v-group>
       </v-layer>

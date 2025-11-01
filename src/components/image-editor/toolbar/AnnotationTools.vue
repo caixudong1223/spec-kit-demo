@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useCanvasStore } from '@/stores/image-editor/canvas'
 import { useAnnotationsStore } from '@/stores/image-editor/annotations'
-import { Location, Delete } from '@element-plus/icons-vue'
+import { Location, Delete, Minus } from '@element-plus/icons-vue'
 import { ElButton, ElButtonGroup, ElDivider, ElTooltip } from 'element-plus'
 
 const canvasStore = useCanvasStore()
@@ -16,13 +16,12 @@ const tools = [
     icon: Location,
     tooltip: '点击画布添加序号节点',
   },
-  // TODO: US3 - 标注线工具
-  // {
-  //   id: 'annotation-line',
-  //   label: '标注线',
-  //   icon: Minus,
-  //   tooltip: '拖拽绘制标注线',
-  // },
+  {
+    id: 'annotation-line',
+    label: '标注线',
+    icon: Minus,
+    tooltip: '拖拽绘制标注线',
+  },
 ]
 
 // 计算选中的标注

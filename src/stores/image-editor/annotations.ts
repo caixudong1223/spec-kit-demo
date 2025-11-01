@@ -235,8 +235,10 @@ export const useAnnotationsStore = defineStore('annotations', () => {
 
     const newLine: AnnotationLine = {
       id: generateUUID(),
-      startPoint: { x: startX, y: startY },
-      endPoint: { x: endX, y: endY },
+      points: {
+        start: { x: startX, y: startY },
+        end: { x: endX, y: endY },
+      },
       text,
       textPosition,
       style: { ...DEFAULT_ANNOTATION_LINE.style },
@@ -294,6 +296,99 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     canvasStore.selectObject('annotation-line', id)
   }
 
+  /**
+   * 更新线段（T068）
+   */
+  function updateLine(id: string, updates: Partial<AnnotationLine>): void {
+    const line = getLineById.value(id)
+    if (!line) return
+
+    Object.assign(line, {
+      ...updates,
+      modifiedAt: getCurrentISOTime(),
+    })
+
+    canvasStore.markAsModified()
+  }
+
+  /**
+   * 更新线段端点（T068）
+   */
+  function updateLinePoints(
+    id: string,
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number
+  ): void {
+    const line = getLineById.value(id)
+    if (!line) return
+
+    line.points.start.x = startX
+    line.points.start.y = startY
+    line.points.end.x = endX
+    line.points.end.y = endY
+
+    // 重新计算文本位置（中点）
+    line.textPosition.x = (startX + endX) / 2
+    line.textPosition.y = (startY + endY) / 2
+
+    line.modifiedAt = getCurrentISOTime()
+
+    canvasStore.markAsModified()
+  }
+
+  /**
+   * 更新线段文本（T068）
+   */
+  function updateLineText(id: string, text: string): void {
+    const line = getLineById.value(id)
+    if (!line) return
+
+    line.text = text
+    line.modifiedAt = getCurrentISOTime()
+
+    canvasStore.markAsModified()
+  }
+
+  /**
+   * 更新线段样式（T071）
+   */
+  function updateLineStyle(id: string, style: Partial<AnnotationLine['style']>): void {
+    const line = getLineById.value(id)
+    if (!line) return
+
+    Object.assign(line.style, style)
+    line.modifiedAt = getCurrentISOTime()
+
+    canvasStore.markAsModified()
+  }
+
+  /**
+   * 开始编辑线段文本（T069）
+   */
+  function startEditingLine(id: string): void {
+    const line = getLineById.value(id)
+    if (!line) return
+
+    // 取消其他线段的编辑状态
+    lines.value.forEach((l) => {
+      l.isEditing = false
+    })
+
+    line.isEditing = true
+  }
+
+  /**
+   * 停止编辑线段文本（T069）
+   */
+  function stopEditingLine(id: string): void {
+    const line = getLineById.value(id)
+    if (!line) return
+
+    line.isEditing = false
+  }
+
   // 清除所有标注
   function clearAllAnnotations(): void {
     nodes.value = []
@@ -336,6 +431,12 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     addLine,
     deleteLine,
     selectLine,
+    updateLine,
+    updateLinePoints,
+    updateLineText,
+    updateLineStyle,
+    startEditingLine,
+    stopEditingLine,
 
     // Clear all
     clearAllAnnotations,

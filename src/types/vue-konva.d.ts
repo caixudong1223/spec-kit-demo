@@ -14,4 +14,5 @@ declare module 'vue-konva' {
   export const VText: any
   export const VLine: any
   export const VArrow: any
+  export const VRect: any
 }

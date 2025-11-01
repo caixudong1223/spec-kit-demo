@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useAnnotationsStore } from '@/stores/image-editor/annotations'
 import { useCanvasStore } from '@/stores/image-editor/canvas'
-import { ElCard, ElEmpty, ElButton, ElTag, ElScrollbar } from 'element-plus'
 import { Delete, Location, Minus } from '@element-plus/icons-vue'
+import { ElButton, ElCard, ElEmpty, ElScrollbar, ElTag } from 'element-plus'
+import { computed } from 'vue'
 
 const annotationsStore = useAnnotationsStore()
 const canvasStore = useCanvasStore()
@@ -131,10 +131,10 @@ function formatPosition(x: number, y: number): string {
                         {{ line.text || '未命名标注线' }}
                       </div>
                       <div class="item-meta">
-                        起点: {{ formatPosition(line.startPoint.x, line.startPoint.y) }}
+                        起点: {{ formatPosition(line.points.start.x, line.points.start.y) }}
                       </div>
                       <div class="item-meta">
-                        终点: {{ formatPosition(line.endPoint.x, line.endPoint.y) }}
+                        终点: {{ formatPosition(line.points.end.x, line.points.end.y) }}
                       </div>
                     </div>
                   </div>

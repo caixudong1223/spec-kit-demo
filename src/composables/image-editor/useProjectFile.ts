@@ -35,17 +35,41 @@ export function useProjectFile() {
   async function saveProjectFile(projectName?: string): Promise<void> {
     isSaving.value = true
 
+    // 显示保存进度通知
+    let progressNotification: any = null
+
     try {
       const name = projectName || currentProjectName.value
+      const imageCount = imagesStore.images.length
 
-      // 序列化项目数据
-      const projectFile = serializeProjectFile(
+      // 如果有图片，显示进度通知
+      if (imageCount > 0) {
+        progressNotification = ElNotification.info({
+          title: '保存中',
+          message: `正在转换图片 (0/${imageCount})...`,
+          duration: 0, // 不自动关闭
+        })
+      }
+
+      // 序列化项目数据（带进度回调）
+      const projectFile = await serializeProjectFile(
         canvasStore.canvasState,
         imagesStore.images,
         annotationsStore.nodes,
         annotationsStore.lines,
-        name
+        name,
+        (current, total) => {
+          // 更新进度通知
+          if (progressNotification) {
+            progressNotification.message = `正在转换图片 (${current}/${total})...`
+          }
+        }
       )
+
+      // 关闭进度通知
+      if (progressNotification) {
+        progressNotification.close()
+      }
 
       // 生成文件名
       const fileName = generateFileName(
@@ -65,6 +89,12 @@ export function useProjectFile() {
       })
     } catch (error) {
       console.error('保存项目失败:', error)
+
+      // 关闭进度通知
+      if (progressNotification) {
+        progressNotification.close()
+      }
+
       ElNotification.error({
         title: '保存失败',
         message: error instanceof Error ? error.message : '未知错误',

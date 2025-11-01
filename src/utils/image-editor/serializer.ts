@@ -12,22 +12,72 @@ import type {
 import { getCurrentISOTime } from './validators'
 
 /**
- * 序列化项目文件
+ * 将 HTMLImageElement 转换为 Base64
  */
-export function serializeProjectFile(
+function imageToBase64(img: HTMLImageElement): Promise<string> {
+  return new Promise((resolve, reject) => {
+    try {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth || img.width
+      canvas.height = img.naturalHeight || img.height
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('无法创建 Canvas 上下文'))
+        return
+      }
+
+      ctx.drawImage(img, 0, 0)
+
+      // 转换为 Base64（PNG 格式，质量较高）
+      const base64 = canvas.toDataURL('image/png')
+      resolve(base64)
+    } catch (error) {
+      reject(error)
+    }
+  })
+}
+
+/**
+ * 序列化项目文件（异步，支持 Base64 图片）
+ */
+export async function serializeProjectFile(
   canvasState: CanvasState,
   images: EditorImage[],
   nodes: AnnotationNode[],
   lines: AnnotationLine[],
-  projectName: string
-): ProjectFile {
+  projectName: string,
+  onProgress?: (current: number, total: number) => void
+): Promise<ProjectFile> {
   const now = getCurrentISOTime()
 
-  // 序列化图片（移除 HTMLImageElement，只保留 src）
-  const serializedImages = images.map((img) => ({
-    ...img,
-    imageElement: undefined as any, // 移除 HTMLImageElement
-  }))
+  // 序列化图片（转换为 Base64）
+  const serializedImages = await Promise.all(
+    images.map(async (img, index) => {
+      try {
+        // 将图片转换为 Base64
+        const base64Src = await imageToBase64(img.imageElement)
+
+        // 更新进度
+        if (onProgress) {
+          onProgress(index + 1, images.length)
+        }
+
+        return {
+          ...img,
+          src: base64Src, // 使用 Base64 代替原始 URL
+          imageElement: undefined as any, // 移除 HTMLImageElement
+        }
+      } catch (error) {
+        console.error(`图片 ${img.name} 转换失败:`, error)
+        // 如果转换失败，保留原始 src
+        return {
+          ...img,
+          imageElement: undefined as any,
+        }
+      }
+    })
+  )
 
   const projectFile: ProjectFile = {
     version: '1.0.0',
